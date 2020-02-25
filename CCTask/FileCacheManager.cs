@@ -45,6 +45,9 @@ namespace CCTask
 		{
 			if(!File.Exists(hashDbFile))
 			{
+#if DEBUG
+				Console.WriteLine("No hashDb found.");
+#endif
 				return;
 			}
 			lock(hashDb)
@@ -95,6 +98,9 @@ namespace CCTask
 				{
 					hashDb[hashKey] = hash;
 				}
+#if DEBUG
+				Console.WriteLine("Check of file {0} resulted in {1}, key {2}, hash {3}, in db {4}", sourcePath, result, hashKey, hash, hashDbFile);
+#endif
 			}
 			return result;
 		}

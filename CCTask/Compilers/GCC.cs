@@ -42,17 +42,25 @@ namespace CCTask.Compilers
 			// let's get all dependencies
 			string gccOutput;
 			var mmargs = string.Format("{1} -MM \"{0}\"", source, flags);
-			#if DEBUG
+#if DEBUG
 			Logger.Instance.LogMessage("MM: {0} ({1})", Path.GetFileName(source), mmargs);
-			#endif
+#endif
 			if(!Utilities.RunAndGetOutput(pathToGcc, mmargs, out gccOutput))
 			{
 				Logger.Instance.LogError(gccOutput);
 				return false;
 			}
 			var dependencies = ParseGccMmOutput(gccOutput).Union(new [] { source });
+
+#if DEBUG
+			Logger.Instance.LogMessage("Dependencies: {0}", string.Join(", ", dependencies));
+#endif
+
 			if(!sourceHasChanged(dependencies, flags) && File.Exists(output))
 			{
+#if DEBUG
+				Logger.Instance.LogMessage("All dependencies up to date");
+#endif
 				return true;
 			}
 
