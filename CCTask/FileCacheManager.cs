@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace CCTask
 {
@@ -17,12 +18,16 @@ namespace CCTask
 
 			hashDbFile = Path.Combine(directory ?? Directory.GetCurrentDirectory(), HashDbFilename);
 			Directory.CreateDirectory(Path.GetDirectoryName(hashDbFile));
+			// Remove all slashes from the path to ensure we use a valid mutex name
+			var mutexName = Regex.Replace(hashDbFile, @"[/\\]", "_");
+			hashDbMutex = new Mutex(false, $@"Global\{nameof(CCTask)}_{mutexName}");
 			Load();
 		}
 
 		public void Dispose()
 		{
 			Save();
+			hashDbMutex.Dispose();
 		}
 
 		public bool SourceHasChanged(IEnumerable<string> sources, string args)
@@ -50,7 +55,8 @@ namespace CCTask
 #endif
 				return;
 			}
-			lock(hashDb)
+			hashDbMutex.WaitOne();
+			try
 			{
 				foreach(var line in File.ReadLines(hashDbFile))
 				{
@@ -58,14 +64,23 @@ namespace CCTask
 					hashDb.Add(new DictionaryKey(fileAndHash[0], fileAndHash[1]), new DictionaryContent(fileAndHash[2], false));
 				}
 			}
+			finally
+			{
+				hashDbMutex.ReleaseMutex();
+			}
 		}
 
 		private void Save()
 		{
 			Directory.CreateDirectory(Path.GetDirectoryName(hashDbFile));
-			lock(hashDb)
+			hashDbMutex.WaitOne();
+			try
 			{
 				File.WriteAllLines(hashDbFile, hashDb.Select(x => string.Format("{0};{1};{2}", x.Key.Path, x.Key.Arguments, x.Value.Hash)));
+			}
+			finally
+			{
+				hashDbMutex.ReleaseMutex();
 			}
 		}
 
@@ -112,6 +127,7 @@ namespace CCTask
 
 		private readonly Dictionary<DictionaryKey, DictionaryContent> hashDb;
 		private readonly string hashDbFile;
+		private readonly Mutex hashDbMutex;
 		private readonly ThreadLocal<MD5> hasherSource;
 
 		private struct DictionaryKey
