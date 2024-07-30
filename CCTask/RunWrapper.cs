@@ -57,7 +57,7 @@ namespace CCTask
 					return;
 				}
 
-				if(e.Data.Contains("error"))
+				if(e.Data.Contains("error:"))
 				{
 					Logger.Instance.LogError(e.Data);
 				}
